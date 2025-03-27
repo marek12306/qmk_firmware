@@ -15,6 +15,7 @@
  */
 
 #include "quantum.h"
+#include "qmk_settings.h"
 
 #if defined(BACKLIGHT_ENABLE) || defined(LED_MATRIX_ENABLE)
 #    include "process_backlight.h"
@@ -66,6 +67,10 @@
 
 #ifdef UNICODE_COMMON_ENABLE
 #    include "process_unicode_common.h"
+#endif
+
+#ifdef VIAL_ENABLE
+#    include "vial.h"
 #endif
 
 #ifdef AUDIO_ENABLE
@@ -143,7 +148,7 @@ __attribute__((weak)) void tap_code16_delay(uint16_t code, uint16_t delay) {
  * \param code The modded keycode to tap. If `code` is `KC_CAPS_LOCK`, the delay will be `TAP_HOLD_CAPS_DELAY`, otherwise `TAP_CODE_DELAY`, if defined.
  */
 __attribute__((weak)) void tap_code16(uint16_t code) {
-    tap_code16_delay(code, code == KC_CAPS_LOCK ? TAP_HOLD_CAPS_DELAY : TAP_CODE_DELAY);
+    tap_code16_delay(code, code == KC_CAPS_LOCK ? QS_tap_hold_caps_delay : QS_tap_code_delay);
 }
 
 __attribute__((weak)) bool pre_process_record_kb(uint16_t keycode, keyrecord_t *record) {
@@ -316,6 +321,9 @@ bool process_record_quantum(keyrecord_t *record) {
 #endif
 #if defined(VIA_ENABLE)
             process_record_via(keycode, record) &&
+#endif
+#if defined(VIAL_ENABLE)
+            process_record_vial(keycode, record) &&
 #endif
 #if defined(POINTING_DEVICE_ENABLE) && defined(POINTING_DEVICE_AUTO_MOUSE_ENABLE)
             process_auto_mouse(keycode, record) &&

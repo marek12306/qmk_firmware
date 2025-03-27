@@ -18,6 +18,7 @@
 #include "quantum_keycodes.h"
 #include "action_tapping.h"
 #include "usb_device_state.h"
+#include "qmk_settings.h"
 
 __attribute__((weak)) bool get_haptic_enabled_key(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {

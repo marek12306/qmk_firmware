@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "action_layer.h"
 #include "timer.h"
 #include "keycode_config.h"
+#include "qmk_settings.h"
 #include <string.h>
 
 extern keymap_config_t keymap_config;
@@ -78,16 +79,10 @@ void del_oneshot_locked_mods(uint8_t mods) {
         oneshot_locked_mods_changed_kb(oneshot_locked_mods);
     }
 }
-#    if (defined(ONESHOT_TIMEOUT) && (ONESHOT_TIMEOUT > 0))
 static uint16_t oneshot_time = 0;
 bool            has_oneshot_mods_timed_out(void) {
-    return TIMER_DIFF_16(timer_read(), oneshot_time) >= ONESHOT_TIMEOUT;
+    return QS_oneshot_timeout > 0 && TIMER_DIFF_16(timer_read(), oneshot_time) >= QS_oneshot_timeout;
 }
-#    else
-bool has_oneshot_mods_timed_out(void) {
-    return false;
-}
-#    endif
 #endif
 
 /* oneshot layer */
@@ -119,12 +114,12 @@ enum {
 #    if (defined(ONESHOT_TIMEOUT) && (ONESHOT_TIMEOUT > 0))
 static uint16_t oneshot_layer_time = 0;
 inline bool     has_oneshot_layer_timed_out(void) {
-    return TIMER_DIFF_16(timer_read(), oneshot_layer_time) >= ONESHOT_TIMEOUT && !(get_oneshot_layer_state() & ONESHOT_TOGGLED);
+    return TIMER_DIFF_16(timer_read(), oneshot_layer_time) >= QS_oneshot_timeout && !(get_oneshot_layer_state() & ONESHOT_TOGGLED);
 }
 #        ifdef SWAP_HANDS_ENABLE
 static uint16_t oneshot_swaphands_time = 0;
 inline bool     has_oneshot_swaphands_timed_out(void) {
-    return TIMER_DIFF_16(timer_read(), oneshot_swaphands_time) >= ONESHOT_TIMEOUT && (swap_hands_oneshot == SHO_ACTIVE);
+    return TIMER_DIFF_16(timer_read(), oneshot_swaphands_time) >= QS_oneshot_timeout && (swap_hands_oneshot == SHO_ACTIVE);
 }
 #        endif
 #    endif
@@ -265,12 +260,12 @@ static uint8_t get_mods_for_report(void) {
 
 #ifndef NO_ACTION_ONESHOT
     if (oneshot_mods) {
-#    if (defined(ONESHOT_TIMEOUT) && (ONESHOT_TIMEOUT > 0))
+if (QS_oneshot_timeout > 0) {
         if (has_oneshot_mods_timed_out()) {
             dprintf("Oneshot: timeout\n");
             clear_oneshot_mods();
         }
-#    endif
+}
         mods |= oneshot_mods;
         if (has_anykey()) {
             clear_oneshot_mods();

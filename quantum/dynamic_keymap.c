@@ -21,6 +21,7 @@
 #include "progmem.h"
 #include "send_string.h"
 #include "keycodes.h"
+#include "action_tapping.h"
 
 #ifdef VIA_ENABLE
 #    include "via.h"
@@ -28,6 +29,10 @@
 #else
 #    include "eeconfig.h"
 #    define DYNAMIC_KEYMAP_EEPROM_START (EECONFIG_SIZE)
+#endif
+
+#ifdef VIAL_ENABLE
+#   include "vial.h"
 #endif
 
 #ifdef ENCODER_ENABLE
@@ -68,9 +73,47 @@
 #    define DYNAMIC_KEYMAP_EEPROM_ADDR DYNAMIC_KEYMAP_EEPROM_START
 #endif
 
-// Dynamic encoders starts after dynamic keymaps
-#ifndef DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR
-#    define DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR (DYNAMIC_KEYMAP_EEPROM_ADDR + (DYNAMIC_KEYMAP_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2))
+// Encoders are located right after the dynamic keymap
+#define VIAL_ENCODERS_EEPROM_ADDR (DYNAMIC_KEYMAP_EEPROM_ADDR + (DYNAMIC_KEYMAP_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2))
+#define DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR VIAL_ENCODERS_EEPROM_ADDR
+
+#define VIAL_ENCODERS_SIZE (NUM_ENCODERS * DYNAMIC_KEYMAP_LAYER_COUNT * 2 * 2)
+
+// QMK settings area is just past encoders
+#define VIAL_QMK_SETTINGS_EEPROM_ADDR (VIAL_ENCODERS_EEPROM_ADDR + VIAL_ENCODERS_SIZE)
+
+#ifdef QMK_SETTINGS
+#include "qmk_settings.h"
+#define VIAL_QMK_SETTINGS_SIZE (sizeof(qmk_settings_t))
+#else
+#define VIAL_QMK_SETTINGS_SIZE 0
+#endif
+
+// Tap-dance
+#define VIAL_TAP_DANCE_EEPROM_ADDR (VIAL_QMK_SETTINGS_EEPROM_ADDR + VIAL_QMK_SETTINGS_SIZE)
+
+#ifdef VIAL_TAP_DANCE_ENABLE
+#define VIAL_TAP_DANCE_SIZE (sizeof(vial_tap_dance_entry_t) * VIAL_TAP_DANCE_ENTRIES)
+#else
+#define VIAL_TAP_DANCE_SIZE 0
+#endif
+
+// Combos
+#define VIAL_COMBO_EEPROM_ADDR (VIAL_TAP_DANCE_EEPROM_ADDR + VIAL_TAP_DANCE_SIZE)
+
+#ifdef VIAL_COMBO_ENABLE
+#define VIAL_COMBO_SIZE (sizeof(vial_combo_entry_t) * VIAL_COMBO_ENTRIES)
+#else
+#define VIAL_COMBO_SIZE 0
+#endif
+
+// Key overrides
+#define VIAL_KEY_OVERRIDE_EEPROM_ADDR (VIAL_COMBO_EEPROM_ADDR + VIAL_COMBO_SIZE)
+
+#ifdef VIAL_KEY_OVERRIDE_ENABLE
+#define VIAL_KEY_OVERRIDE_SIZE (sizeof(vial_key_override_entry_t) * VIAL_KEY_OVERRIDE_ENTRIES)
+#else
+#define VIAL_KEY_OVERRIDE_SIZE 0
 #endif
 
 // Dynamic macro starts after dynamic encoders, but only when using ENCODER_MAP
@@ -172,7 +215,98 @@ void dynamic_keymap_set_encoder(uint8_t layer, uint8_t encoder_id, bool clockwis
 }
 #endif // ENCODER_MAP_ENABLE
 
-void dynamic_keymap_reset(void) {
+#ifdef QMK_SETTINGS
+uint8_t dynamic_keymap_get_qmk_settings(uint16_t offset) {
+    if (offset >= VIAL_QMK_SETTINGS_SIZE)
+        return 0;
+
+    void *address = (void*)(VIAL_QMK_SETTINGS_EEPROM_ADDR + offset);
+    return eeprom_read_byte(address);
+}
+
+void dynamic_keymap_set_qmk_settings(uint16_t offset, uint8_t value) {
+    if (offset >= VIAL_QMK_SETTINGS_SIZE)
+        return;
+
+    void *address = (void*)(VIAL_QMK_SETTINGS_EEPROM_ADDR + offset);
+    eeprom_update_byte(address, value);
+}
+#endif
+
+#ifdef VIAL_TAP_DANCE_ENABLE
+int dynamic_keymap_get_tap_dance(uint8_t index, vial_tap_dance_entry_t *entry) {
+    if (index >= VIAL_TAP_DANCE_ENTRIES)
+        return -1;
+
+    void *address = (void*)(VIAL_TAP_DANCE_EEPROM_ADDR + index * sizeof(vial_tap_dance_entry_t));
+    eeprom_read_block(entry, address, sizeof(vial_tap_dance_entry_t));
+
+    return 0;
+}
+
+int dynamic_keymap_set_tap_dance(uint8_t index, const vial_tap_dance_entry_t *entry) {
+    if (index >= VIAL_TAP_DANCE_ENTRIES)
+        return -1;
+
+    void *address = (void*)(VIAL_TAP_DANCE_EEPROM_ADDR + index * sizeof(vial_tap_dance_entry_t));
+    eeprom_write_block(entry, address, sizeof(vial_tap_dance_entry_t));
+
+    return 0;
+}
+#endif
+
+#ifdef VIAL_COMBO_ENABLE
+int dynamic_keymap_get_combo(uint8_t index, vial_combo_entry_t *entry) {
+    if (index >= VIAL_COMBO_ENTRIES)
+        return -1;
+
+    void *address = (void*)(VIAL_COMBO_EEPROM_ADDR + index * sizeof(vial_combo_entry_t));
+    eeprom_read_block(entry, address, sizeof(vial_combo_entry_t));
+
+    return 0;
+}
+
+int dynamic_keymap_set_combo(uint8_t index, const vial_combo_entry_t *entry) {
+    if (index >= VIAL_COMBO_ENTRIES)
+        return -1;
+
+    void *address = (void*)(VIAL_COMBO_EEPROM_ADDR + index * sizeof(vial_combo_entry_t));
+    eeprom_write_block(entry, address, sizeof(vial_combo_entry_t));
+
+    return 0;
+}
+#endif
+
+#ifdef VIAL_KEY_OVERRIDE_ENABLE
+int dynamic_keymap_get_key_override(uint8_t index, vial_key_override_entry_t *entry) {
+    if (index >= VIAL_KEY_OVERRIDE_ENTRIES)
+        return -1;
+
+    void *address = (void*)(VIAL_KEY_OVERRIDE_EEPROM_ADDR + index * sizeof(vial_key_override_entry_t));
+    eeprom_read_block(entry, address, sizeof(vial_key_override_entry_t));
+
+    return 0;
+}
+
+int dynamic_keymap_set_key_override(uint8_t index, const vial_key_override_entry_t *entry) {
+    if (index >= VIAL_KEY_OVERRIDE_ENTRIES)
+        return -1;
+
+    void *address = (void*)(VIAL_KEY_OVERRIDE_EEPROM_ADDR + index * sizeof(vial_key_override_entry_t));
+    eeprom_write_block(entry, address, sizeof(vial_key_override_entry_t));
+
+    return 0;
+}
+#endif
+
+void dynamic_keymap_reset(void)
+{
+#ifdef VIAL_ENABLE
+    /* temporarily unlock the keyboard so we can set hardcoded QK_BOOT keycode */
+    int vial_unlocked_prev = vial_unlocked;
+    vial_unlocked = 1;
+#endif
+
 #ifdef KEYCODE_BUFFER_ENABLE
     uint16_t  keymap_buffer[MATRIX_ROWS][MATRIX_COLS];
 
@@ -200,6 +334,36 @@ void dynamic_keymap_reset(void) {
         }
 #endif // ENCODER_MAP_ENABLE
     }
+
+#ifdef QMK_SETTINGS
+    qmk_settings_reset();
+#endif
+
+#ifdef VIAL_TAP_DANCE_ENABLE
+    vial_tap_dance_entry_t td = { KC_NO, KC_NO, KC_NO, KC_NO, TAPPING_TERM };
+    for (size_t i = 0; i < VIAL_TAP_DANCE_ENTRIES; ++i) {
+        dynamic_keymap_set_tap_dance(i, &td);
+    }
+#endif
+
+#ifdef VIAL_COMBO_ENABLE
+    vial_combo_entry_t combo = { 0 };
+    for (size_t i = 0; i < VIAL_COMBO_ENTRIES; ++i)
+        dynamic_keymap_set_combo(i, &combo);
+#endif
+
+#ifdef VIAL_KEY_OVERRIDE_ENABLE
+    vial_key_override_entry_t ko = { 0 };
+    ko.layers = ~0;
+    ko.options = vial_ko_option_activation_negative_mod_up | vial_ko_option_activation_required_mod_down | vial_ko_option_activation_trigger_down;
+    for (size_t i = 0; i < VIAL_KEY_OVERRIDE_ENTRIES; ++i)
+        dynamic_keymap_set_key_override(i, &ko);
+#endif
+
+#ifdef VIAL_ENABLE
+    /* re-lock the keyboard */
+    vial_unlocked = vial_unlocked_prev;
+#endif
 }
 
 void dynamic_keymap_get_buffer(uint16_t offset, uint16_t size, uint8_t *data) {
@@ -221,6 +385,51 @@ void dynamic_keymap_set_buffer(uint16_t offset, uint16_t size, uint8_t *data) {
     uint16_t dynamic_keymap_eeprom_size = DYNAMIC_KEYMAP_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2;
     void *   target                     = (void *)(DYNAMIC_KEYMAP_EEPROM_ADDR + offset);
     uint8_t *source                     = data;
+
+    #ifdef VIAL_ENABLE
+    /* ensure the writes are bounded */
+    if (offset >= dynamic_keymap_eeprom_size || dynamic_keymap_eeprom_size - offset < size)
+        return;
+
+#ifndef VIAL_INSECURE
+    /* Check whether it is trying to send a QK_BOOT keycode; only allow setting these if unlocked */
+    if (!vial_unlocked) {
+        /* how much of the input array we'll have to check in the loop */
+        uint16_t chk_offset = 0;
+        uint16_t chk_sz = size;
+
+        /* initial byte misaligned -- this means the first keycode will be a combination of existing and new data */
+        if (offset % 2 != 0) {
+            uint16_t kc = (eeprom_read_byte((uint8_t*)target - 1) << 8) | data[0];
+            if (kc == QK_BOOT)
+                data[0] = 0xFF;
+
+            /* no longer have to check the first byte */
+            chk_offset += 1;
+        }
+
+        /* final byte misaligned -- this means the last keycode will be a combination of new and existing data */
+        if ((offset + size) % 2 != 0) {
+            uint16_t kc = (data[size - 1] << 8) | eeprom_read_byte((uint8_t*)target + size);
+            if (kc == QK_BOOT)
+                data[size - 1] = 0xFF;
+
+            /* no longer have to check the last byte */
+            chk_sz -= 1;
+        }
+
+        /* check the entire array, replace any instances of QK_BOOT with invalid keycode 0xFFFF */
+        for (uint16_t i = chk_offset; i < chk_sz; i += 2) {
+            uint16_t kc = (data[i] << 8) | data[i + 1];
+            if (kc == QK_BOOT) {
+                data[i] = 0xFF;
+                data[i + 1] = 0xFF;
+            }
+        }
+    }
+#endif
+#endif
+
     for (uint16_t i = 0; i < size; i++) {
         if (offset + i < dynamic_keymap_eeprom_size) {
             eeprom_update_byte(target, *source);
@@ -300,6 +509,15 @@ void dynamic_keymap_macro_reset(void) {
     }
 }
 
+#ifdef VIAL_ENABLE
+static uint16_t decode_keycode(uint16_t kc) {
+    /* map 0xFF01 => 0x0100; 0xFF02 => 0x0200, etc */
+    if (kc > 0xFF00)
+        return (kc & 0xFF) << 8;
+    return kc;
+}
+#endif
+
 void dynamic_keymap_macro_send(uint8_t id) {
     if (id >= DYNAMIC_KEYMAP_MACRO_COUNT) {
         return;
@@ -357,7 +575,33 @@ void dynamic_keymap_macro_send(uint8_t id) {
                 }
                 // Null terminate
                 data[3] = 0;
-            } else if (data[1] == SS_DELAY_CODE) {
+            } else
+
+            #ifdef VIAL_ENABLE
+            if (data[1] == VIAL_MACRO_EXT_TAP || data[1] == VIAL_MACRO_EXT_DOWN || data[1] == VIAL_MACRO_EXT_UP) {
+                data[2] = eeprom_read_byte(p++);
+                if (data[2] != 0) {
+                    data[3] = eeprom_read_byte(p++);
+                    if (data[3] != 0) {
+                        uint16_t kc;
+                        memcpy(&kc, &data[2], sizeof(kc));
+                        kc = decode_keycode(kc);
+                        switch (data[1]) {
+                        case VIAL_MACRO_EXT_TAP:
+                            vial_keycode_tap(kc);
+                            break;
+                        case VIAL_MACRO_EXT_DOWN:
+                            vial_keycode_down(kc);
+                            break;
+                        case VIAL_MACRO_EXT_UP:
+                            vial_keycode_up(kc);
+                            break;
+                        }
+                    }
+                }
+            } else
+            #endif
+            if (data[1] == SS_DELAY_CODE) {
                 // Get the number and '|'
                 // At most this is 4 digits plus '|'
                 uint8_t i = 2;

@@ -55,3 +55,5 @@
 #    define RGB_MATRIX_FRAMEBUFFER_EFFECTS
 
 #endif
+
+#define DYNAMIC_MACRO_NO_NESTING

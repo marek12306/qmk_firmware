@@ -25,7 +25,29 @@
 #include "action_layer.h"
 #include "action_tapping.h"
 #include "action_util.h"
+
+#ifdef VIAL_ENABLE
+#include "vial.h"
+#endif
+
+#ifdef VIAL_COMBO_ENABLE
+#include "dynamic_keymap.h"
+/* dynamic combos are stored entirely in ram */
+#undef pgm_read_word
+#define pgm_read_word(address_short) *((uint16_t*)(address_short))
+
+uint16_t combo_count(void) {
+    return VIAL_COMBO_ENTRIES;
+}
+
+extern combo_t key_combos[];
+
+combo_t* combo_get(uint16_t combo_idx) {
+    return &key_combos[combo_idx];
+}
+#else
 #include "keymap_introspection.h"
+#endif
 
 __attribute__((weak)) void process_combo_event(uint16_t combo_index, bool pressed) {}
 
