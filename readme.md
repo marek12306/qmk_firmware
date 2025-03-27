@@ -3,6 +3,9 @@
 This fork downstreams Vial code to wireless_playground branch of Keychron's QMK fork.
 It currently only works with Keychron K3 Max keyboard (as it's one that I am using).
 
+> [!WARNING]  
+> This code breaks Keychron Launcher and VIA support.
+
 -------------------------------------------------
 
 # Quantum Mechanical Keyboard Firmware
