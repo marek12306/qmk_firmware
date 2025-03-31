@@ -116,16 +116,10 @@
 #define VIAL_KEY_OVERRIDE_SIZE 0
 #endif
 
-// Dynamic macro starts after dynamic encoders, but only when using ENCODER_MAP
-#ifdef ENCODER_MAP_ENABLE
-#    ifndef DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
-#        define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR (DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR + (DYNAMIC_KEYMAP_LAYER_COUNT * NUM_ENCODERS * 2 * 2))
-#    endif // DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
-#else      // ENCODER_MAP_ENABLE
-#    ifndef DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
-#        define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR (DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR)
-#    endif // DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
-#endif     // ENCODER_MAP_ENABLE
+// Dynamic macro
+#ifndef DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
+#    define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR (VIAL_KEY_OVERRIDE_EEPROM_ADDR + VIAL_KEY_OVERRIDE_SIZE)
+#endif
 
 // Sanity check that dynamic keymaps fit in available EEPROM
 // If there's not 100 bytes available for macros, then something is wrong.
