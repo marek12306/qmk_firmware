@@ -4,7 +4,7 @@ This downstream fork backports Vial code to wireless_playground branch of Keychr
 It currently only works with Keychron K3 Max keyboard (as it's one that I am using).
 
 > [!WARNING]  
-> This code breaks Keychron Launcher and VIA support.
+> Vial breaks Keychron Launcher and VIA support.
 
 -------------------------------------------------
 
