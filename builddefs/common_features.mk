@@ -620,6 +620,10 @@ ifeq ($(strip $(LED_TABLES)), yes)
     SRC += $(QUANTUM_DIR)/led_tables.c
 endif
 
+ifeq ($(strip $(SIGNALRGB_ENABLE)), yes)
+    OPT_DEFS += -DSIGNALRGB_ENABLE
+endif
+
 ifeq ($(strip $(VIA_ENABLE)), yes)
     DYNAMIC_KEYMAP_ENABLE := yes
     RAW_ENABLE := yes
